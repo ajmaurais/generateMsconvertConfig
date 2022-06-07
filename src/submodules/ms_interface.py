@@ -56,13 +56,13 @@ class MSFile:
         self.fname = None
         self._data = MSExperiment()
         self.windows = None
-        self.overlapping = None
+        self.max_overlap = None
 
     def read(self, fname: str):
         self.fname = fname
         MzMLFile().load(self.fname, self._data)
         self.windows = self.get_isolation_windows()
-        self.overlapping = self.calc_overlaping()
+        self.max_overlap = self.calc_max_overlap()
 
     def iter_spectra(self, min_level: int = 2, max_level: int = 2) -> Generator[Scan, None, None]:
         level_range = range(min_level, max_level + 1)
@@ -83,22 +83,20 @@ class MSFile:
             for window, rt in self.windows.items():
                 outF.write('{}\t{}\t{}\n'.format(window.first, window.second, rt))
 
-    def calc_overlaping(self) -> bool:
+    def calc_max_overlap(self) -> bool:
         ''' Determine if the file contains overlapping isolation windows. '''
 
         # list of windows sorted by RT
         sorted_windows = [window for window, _ in sorted(self.windows.items(), key = lambda x: x[1])]
 
-        overlaps = list()
+        max_overlap = 0
         for outer in sorted_windows:
             for inner in sorted_windows:
                 if outer is not inner:
                     if outer == inner:
-                        raise RuntimeError('Duplicate isolation windows')
-                    if _overlap := outer.overlap(inner):
-                        overlaps.append(_round(_overlap / outer.dist()))
+                        raise RuntimeError('Duplicate isolation windows!')
+                    if ovl := outer.overlap(inner):
+                        max_overlap = max(0, _round(ovl / outer.dist()))
         
-        return overlaps
-
-
+        return max_overlap
 
