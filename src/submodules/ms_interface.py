@@ -11,6 +11,8 @@ def _round(n: float) -> float:
 
 
 class Pair:
+    __slots__ = ('first', 'second')
+
     def __init__(self, first: float, second: float):
         self.first = _round(first)
         self.second = _round(second)
@@ -89,6 +91,7 @@ class MSFile:
         # list of windows sorted by RT
         sorted_windows = [window for window, _ in sorted(self.windows.items(), key = lambda x: x[1])]
 
+        # find max overlap between all isolation windows
         max_overlap = 0
         for outer in sorted_windows:
             for inner in sorted_windows:

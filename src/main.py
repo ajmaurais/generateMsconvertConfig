@@ -21,6 +21,7 @@ def main():
     ms_file.read(args.file)
     demultiplex = ms_file.max_overlap > args.demultiThreshold
 
+    # write msconvert config
     if args.format == 'txt':
         with open(args.ofname, 'w') as outF:
             write_msconvert_config(outF, demultiplex)
