@@ -3,7 +3,7 @@ DEFAULT_PARAMS = [('mzML', True),
                   ('mz64', True),
                   ('inten64', True),
                   ('simAsSpectra', True),
-                  ('filter', 'peakPicking vendor msLevel=2-2')]
+                  ('filter', 'peakPicking vendor msLevel=1-2')]
 DEMULTIPLEX = ('filter', 'demultiplex optimization=overlap_only massError=10.0ppm')
 
 def write_msconvert_config(out, demultiplex: bool):
