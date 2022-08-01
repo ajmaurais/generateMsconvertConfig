@@ -52,26 +52,51 @@ class Scan:
     def get_rt(self) -> float:
         return self._data.getRT()
 
+    def get_ms_level(self) -> int:
+        return self._data.getMSLevel()
+
+    def get_length(self) -> int:
+        return self._data.size()
+
+    def get_min_max_mz(self) -> Pair:
+        if not self._data.isSorted():
+            self._data.sortByPosition()
+        return Pair(self._data[0].getMZ(), self._data[self.get_length() - 1].getMZ())
 
 class MSFile:
     def __init__(self):
         self.fname = None
         self._data = MSExperiment()
-        self.windows = None
-        self.max_overlap = None
 
     def read(self, fname: str):
         self.fname = fname
         MzMLFile().load(self.fname, self._data)
-        self.windows = self.get_isolation_windows()
-        self.max_overlap = self.calc_max_overlap()
+        self._data.sortSpectra(True)
 
     def iter_spectra(self, min_level: int = 2, max_level: int = 2) -> Generator[Scan, None, None]:
         level_range = range(min_level, max_level + 1)
         for i in range(self._data.size()):
             if self._data.getSpectrum(i).getMSLevel() in level_range:
                 yield Scan(self._data.getSpectrum(i))
-        
+    
+    def get_ranges(self) -> Dict[str, float]:
+        mz_ranges=dict()
+        for i, s in enumerate(self.iter_spectra(min_level = 1)):
+            if s.get_length() > 0:
+                level = s.get_ms_level()
+                min_max = s.get_min_max_mz()
+
+                if level not in mz_ranges:
+                    mz_ranges[level] = [min_max.first, 0]
+
+                if min_max.first < mz_ranges[level][0]:
+                    mz_ranges[level][0] = min_max.first
+                if min_max.second > mz_ranges[level][1]:
+                    mz_ranges[level][1] = min_max.second
+
+        return mz_ranges
+
+
     def get_isolation_windows(self) -> Dict[Pair, float]:
         ret = dict()
         for s in self.iter_spectra():
@@ -80,16 +105,19 @@ class MSFile:
         return ret
 
     def write_isolation_windows(self, fname: str):
+        windows = self.get_isolation_windows()
+        max_overlap = self.calc_max_overlap()
         with open(fname, 'w') as outF:
             outF.write('lo\thi\trt\n')
             for window, rt in self.windows.items():
                 outF.write('{}\t{}\t{}\n'.format(window.first, window.second, rt))
 
-    def calc_max_overlap(self) -> bool:
+    def calc_max_overlap(self, windows=None) -> bool:
         ''' Determine if the file contains overlapping isolation windows. '''
 
         # list of windows sorted by RT
-        sorted_windows = [window for window, _ in sorted(self.windows.items(), key = lambda x: x[1])]
+        _windows = windows if windows is not None else self.get_isolation_windows()
+        sorted_windows = [window for window, _ in sorted(_windows.items(), key = lambda x: x[1])]
 
         # find max overlap between all isolation windows
         max_overlap = 0
